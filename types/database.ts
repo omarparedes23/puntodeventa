@@ -24,6 +24,8 @@ export interface Database {
           logo_url: string | null
           serie_boleta: string
           serie_factura: string
+          serie_nc_boleta: string
+          serie_nc_factura: string
           nubefact_token: string | null
           nubefact_modo: 'demo' | 'produccion'
           created_at: string
@@ -40,6 +42,8 @@ export interface Database {
           logo_url?: string | null
           serie_boleta?: string
           serie_factura?: string
+          serie_nc_boleta?: string
+          serie_nc_factura?: string
           nubefact_token?: string | null
           nubefact_modo?: 'demo' | 'produccion'
           created_at?: string
@@ -56,6 +60,8 @@ export interface Database {
           logo_url?: string | null
           serie_boleta?: string
           serie_factura?: string
+          serie_nc_boleta?: string
+          serie_nc_factura?: string
           nubefact_token?: string | null
           nubefact_modo?: 'demo' | 'produccion'
           updated_at?: string
@@ -551,7 +557,7 @@ export interface Database {
           cliente_id: string | null
           usuario_id: string
           tipo_venta: 'mayorista' | 'minorista'
-          tipo_comprobante: 'boleta' | 'factura' | 'ticket'
+          tipo_comprobante: 'boleta' | 'factura' | 'ticket' | 'nota_credito' | 'nota_debito'
           serie: string | null
           correlativo: number | null
           numero_completo: string | null
@@ -567,6 +573,8 @@ export interface Database {
           pdf_url: string | null
           xml_url: string | null
           fecha_emision: string
+          referencia_venta_id: string | null
+          nota_motivo: string | null
           created_at: string
           updated_at: string
         }
@@ -577,7 +585,7 @@ export interface Database {
           cliente_id?: string | null
           usuario_id: string
           tipo_venta?: 'mayorista' | 'minorista'
-          tipo_comprobante: 'boleta' | 'factura' | 'ticket'
+          tipo_comprobante: 'boleta' | 'factura' | 'ticket' | 'nota_credito' | 'nota_debito'
           serie?: string | null
           correlativo?: number | null
           numero_completo?: string | null
@@ -593,6 +601,8 @@ export interface Database {
           pdf_url?: string | null
           xml_url?: string | null
           fecha_emision?: string
+          referencia_venta_id?: string | null
+          nota_motivo?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -604,6 +614,8 @@ export interface Database {
           nubefact_id?: string | null
           pdf_url?: string | null
           xml_url?: string | null
+          referencia_venta_id?: string | null
+          nota_motivo?: string | null
           updated_at?: string
         }
         Relationships: []
