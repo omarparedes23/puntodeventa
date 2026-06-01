@@ -90,7 +90,7 @@ export function ReporteVentas({ inicial }: { inicial: ResumenVentas }) {
               width={60}
             />
             <Tooltip
-              formatter={(v: number) => [fmtMoney(v), 'Total']}
+              formatter={(v) => [fmtMoney(Number(v ?? 0)), 'Total']}
               labelFormatter={(l) => `Fecha: ${l}`}
             />
             <Line

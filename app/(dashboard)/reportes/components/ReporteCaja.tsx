@@ -92,7 +92,7 @@ export function ReporteCaja({ inicial }: { inicial: PagoMetodo[] }) {
                   />
                 ))}
               </Pie>
-              <Tooltip formatter={(v: number) => fmtMoney(v)} />
+              <Tooltip formatter={(v) => fmtMoney(Number(v ?? 0))} />
             </PieChart>
           </ResponsiveContainer>
 

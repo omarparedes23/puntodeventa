@@ -73,7 +73,7 @@ export function ReporteProductos({ inicial }: { inicial: ProductoVendido[] }) {
                 width={76}
               />
               <Tooltip
-                formatter={(v: number) => [fmtMoney(v), 'Vendido']}
+                formatter={(v) => [fmtMoney(Number(v ?? 0)), 'Vendido']}
               />
               <Bar dataKey="total" radius={[0, 4, 4, 0]}>
                 {datos.map((_, i) => (
