@@ -290,7 +290,7 @@ export async function procesarVenta(
   const { data: venta, error: ventaError } = await supabase
     .from('ptovta_ventas')
     .insert({
-      empresa_id: perfil.empresa_id,
+      empresa_id: perfil.empresa_id!,
       caja_id: caja.id,
       cliente_id: cliente_id ?? null,
       usuario_id: user.id,
@@ -355,7 +355,7 @@ export async function procesarVenta(
     const stockNuevo = stockAnterior.minus(item.cantidad).toDecimalPlaces(3).toNumber()
     await adminClient.from('ptovta_productos').update({ stock_actual: stockNuevo }).eq('id', item.producto_id)
     await adminClient.from('ptovta_kardex').insert({
-      empresa_id: perfil.empresa_id,
+      empresa_id: perfil.empresa_id!,
       producto_id: item.producto_id,
       tipo: 'salida',
       motivo: 'venta',
