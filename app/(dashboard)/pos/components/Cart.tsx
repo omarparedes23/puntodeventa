@@ -46,7 +46,7 @@ function CantidadInput({
       onBlur={(e) => commit(e.target.value)}
       onKeyDown={(e) => e.key === 'Enter' && commit(raw)}
       onFocus={(e) => e.target.select()}
-      className="w-full border rounded-lg px-2 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+      className="w-full border rounded-lg px-2 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring"
     />
   )
 }
@@ -65,8 +65,8 @@ export function Cart({ onCobrar }: { onCobrar: () => void }) {
 
   if (items.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-gray-400 text-sm py-16">
-        Busca un producto para agregar al carrito
+      <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm py-16">
+        Busca un producto para agregar al ticket
       </div>
     )
   }
@@ -74,14 +74,17 @@ export function Cart({ onCobrar }: { onCobrar: () => void }) {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Header carrito */}
-      <div className="px-4 py-2 border-b flex items-center justify-between">
-        <span className="text-xs font-medium text-gray-500">{items.length} producto{items.length !== 1 ? 's' : ''}</span>
-        <button
-          onClick={clear}
-          className="text-xs text-red-400 hover:text-red-600 hover:underline transition"
-        >
-          Vaciar carrito
-        </button>
+      <div className="px-6 py-4 border-b border-border bg-muted flex items-center justify-between shrink-0">
+        <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Ticket de Venta</h2>
+        <div className="flex items-center gap-4">
+          <span className="text-xs font-medium text-muted-foreground bg-background px-2 py-1 rounded-md border shadow-sm">{items.length} item{items.length !== 1 ? 's' : ''}</span>
+          <button
+            onClick={clear}
+            className="text-xs text-red-500 hover:text-red-700 font-medium transition"
+          >
+            Vaciar
+          </button>
+        </div>
       </div>
 
       {/* Items */}
@@ -96,12 +99,12 @@ export function Cart({ onCobrar }: { onCobrar: () => void }) {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{item.nombre}</p>
                     {item.codigo && (
-                      <p className="text-xs text-gray-400">{item.codigo}</p>
+                      <p className="text-xs text-muted-foreground">{item.codigo}</p>
                     )}
                   </div>
                   <button
                     onClick={() => removeItem(item.producto_id)}
-                    className="text-gray-400 hover:text-red-600 hover:bg-red-50 transition rounded-lg p-1 flex-shrink-0"
+                    className="text-muted-foreground hover:text-red-600 hover:bg-red-50 transition rounded-lg p-1 flex-shrink-0"
                     aria-label="Eliminar"
                     title="Eliminar del carrito"
                   >
@@ -114,7 +117,7 @@ export function Cart({ onCobrar }: { onCobrar: () => void }) {
                 <div className="mt-2 grid grid-cols-3 gap-2 items-center">
                   {/* Cantidad */}
                   <div>
-                    <label className="text-xs text-gray-400 block mb-1">Cantidad</label>
+                    <label className="text-xs text-muted-foreground block mb-1">Cantidad</label>
                     <CantidadInput
                       productoId={item.producto_id}
                       cantidad={item.cantidad}
@@ -125,7 +128,7 @@ export function Cart({ onCobrar }: { onCobrar: () => void }) {
 
                   {/* Descuento */}
                   <div>
-                    <label className="text-xs text-gray-400 block mb-1">
+                    <label className="text-xs text-muted-foreground block mb-1">
                       Dto. S/. {rol === 'vendedor' && <span className="text-orange-500">(max {MAX_DESC_PCT}%)</span>}
                     </label>
                     <input
@@ -138,18 +141,18 @@ export function Cart({ onCobrar }: { onCobrar: () => void }) {
                         const v = parseFloat(e.target.value)
                         if (!isNaN(v) && v >= 0) updateDescuento(item.producto_id, Math.min(v, maxDescuento))
                       }}
-                      className="w-full border rounded-lg px-2 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border rounded-lg px-2 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                   </div>
 
                   {/* Subtotal */}
                   <div className="text-right">
-                    <p className="text-xs text-gray-400 mb-1">Total línea</p>
+                    <p className="text-xs text-muted-foreground mb-1">Total línea</p>
                     <p className="text-sm font-mono font-semibold">{fmtMoney(item.line_total)}</p>
                   </div>
                 </div>
 
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {fmtMoney(item.precio_unitario)} × {item.cantidad}
                   {item.descuento > 0 && <span className="text-orange-600"> − {fmtMoney(item.descuento)}</span>}
                 </p>
@@ -160,24 +163,24 @@ export function Cart({ onCobrar }: { onCobrar: () => void }) {
       </div>
 
       {/* Totales */}
-      <div className="border-t bg-gray-50 px-4 py-3 space-y-1 text-sm">
+      <div className="border-t bg-muted px-4 py-3 space-y-1 text-sm">
         {descuento_total > 0 && (
           <div className="flex justify-between text-orange-600">
             <span>Descuento</span>
             <span className="font-mono">− {fmtMoney(descuento_total)}</span>
           </div>
         )}
-        <div className="flex justify-between text-gray-500">
+        <div className="flex justify-between text-muted-foreground">
           <span>Subtotal (sin IGV)</span>
           <span className="font-mono">{fmtMoney(subtotal)}</span>
         </div>
-        <div className="flex justify-between text-gray-500">
+        <div className="flex justify-between text-muted-foreground">
           <span>IGV (18%)</span>
           <span className="font-mono">{fmtMoney(igv)}</span>
         </div>
         <div className="flex justify-between font-bold text-base pt-1 border-t">
           <span>Total</span>
-          <span className="font-mono text-blue-700">{fmtMoney(total)}</span>
+          <span className="font-mono text-primary">{fmtMoney(total)}</span>
         </div>
       </div>
 
@@ -185,7 +188,7 @@ export function Cart({ onCobrar }: { onCobrar: () => void }) {
       <div className="px-4 pb-4 pt-3">
         <button
           onClick={onCobrar}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl transition text-base"
+          className="w-full bg-success hover:bg-success/90 text-success-foreground font-semibold py-3.5 rounded-xl transition text-base"
         >
           Cobrar {fmtMoney(total)}
         </button>

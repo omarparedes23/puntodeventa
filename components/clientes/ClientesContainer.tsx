@@ -1,12 +1,15 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { getClientes } from '@/app/(dashboard)/clientes/actions'
+import { useSessionStore } from '@/stores/sessionStore'
+import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/database'
 import { ClientesTable } from './ClientesTable'
 import { ClienteModal } from './ClienteModal'
 
 type Cliente = Database['public']['Tables']['ptovta_clientes']['Row']
+
+const supabase = createClient()
 
 export function ClientesContainer({ initialClientes = [] }: { initialClientes?: Cliente[] }) {
   const [query, setQuery] = useState('')
@@ -14,26 +17,36 @@ export function ClientesContainer({ initialClientes = [] }: { initialClientes?: 
   const [isLoading, setIsLoading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null)
+  const empresaId = useSessionStore((s) => s.empresa?.id)
 
   const fetchClientes = useCallback(async (searchQuery: string) => {
+    if (!empresaId) return
     setIsLoading(true)
-    const { data, error } = await getClientes(searchQuery)
-    if (!error && data) {
-      setClientes(data)
+    let q = supabase
+      .from('ptovta_clientes')
+      .select('*')
+      .eq('empresa_id', empresaId)
+      .order('nombre')
+      .limit(100)
+
+    if (searchQuery) {
+      q = q.or(`nombre.ilike.%${searchQuery}%,nro_documento.ilike.%${searchQuery}%`)
     }
+
+    const { data } = await q
+    if (data) setClientes(data as Cliente[])
     setIsLoading(false)
-  }, [])
+  }, [empresaId])
 
-  // Debounced search
+  // Búsqueda debounced — solo cuando el usuario escribe, no en el mount inicial
   useEffect(() => {
-    // Only fetch if it's not the initial empty query mount
-    const timer = setTimeout(() => {
-      // Small optimization: If query is empty on first load, we already have initial data
-      fetchClientes(query)
-    }, 300)
-
+    if (!query) {
+      setClientes(initialClientes)
+      return
+    }
+    const timer = setTimeout(() => fetchClientes(query), 300)
     return () => clearTimeout(timer)
-  }, [query, fetchClientes])
+  }, [query, fetchClientes, initialClientes])
 
   const handleCreate = () => {
     setEditingCliente(null)

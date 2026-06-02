@@ -3,7 +3,12 @@
 import { useState, useTransition } from 'react'
 import Decimal from 'decimal.js'
 import { useCartStore } from '@/stores/cartStore'
-import { procesarVenta, buscarClientes, type ClienteSearchResult } from '../actions'
+import { useSessionStore } from '@/stores/sessionStore'
+import { createClient } from '@/lib/supabase/client'
+import { searchClientesOffline, saveVentaPendiente } from '@/lib/offline/sync'
+import { procesarVenta, type ClienteSearchResult } from '../actions'
+
+const supabase = createClient()
 
 type Metodo = 'efectivo' | 'yape' | 'tarjeta' | 'transferencia' | 'credito'
 type TipoComprobante = 'ticket' | 'boleta' | 'factura'
@@ -25,13 +30,27 @@ function ClienteSearch({ onSelect }: { onSelect: (c: ClienteSearchResult | null)
   const [results, setResults] = useState<ClienteSearchResult[]>([])
   const [selected, setSelected] = useState<ClienteSearchResult | null>(null)
   const [open, setOpen] = useState(false)
+  const empresaId = useSessionStore((s) => s.empresa?.id)
 
   async function handleChange(q: string) {
     setQuery(q)
     if (!selected) {
-      if (q.length >= 2) {
-        const { data } = await buscarClientes(q)
-        setResults(data ?? [])
+      if (q.length >= 2 && empresaId) {
+        if (!navigator.onLine) {
+          const local = await searchClientesOffline(empresaId, q)
+          setResults(local as ClienteSearchResult[])
+          setOpen(local.length > 0)
+          return
+        }
+        const { data } = await supabase
+          .from('ptovta_clientes')
+          .select('id, nombre, tipo_documento, nro_documento, tipo_cliente')
+          .eq('empresa_id', empresaId)
+          .eq('activo', true)
+          .or(`nombre.ilike.%${q}%,nro_documento.ilike.%${q}%`)
+          .order('nombre')
+          .limit(10)
+        setResults((data as ClienteSearchResult[]) ?? [])
         setOpen(true)
       } else {
         setResults([])
@@ -96,7 +115,7 @@ export function PaymentModal({
 }: {
   total: number
   onClose: () => void
-  onSuccess: (resultado: { id: string; numero_completo: string | null; total: number; tipo_comprobante: string }) => void
+  onSuccess: (resultado: { id: string; numero_completo: string | null; total: number; tipo_comprobante: string; pendiente?: boolean }) => void
 }) {
   const [tipoComprobante, setTipoComprobante] = useState<TipoComprobante>('ticket')
   const [pagos, setPagos] = useState<PagoEntry[]>([{ metodo: 'efectivo', monto: total.toFixed(2) }])
@@ -107,6 +126,7 @@ export function PaymentModal({
   const items = useCartStore((s) => s.items)
   const tipoVenta = useCartStore((s) => s.tipoVenta)
   const clear = useCartStore((s) => s.clear)
+  const empresaId = useSessionStore((s) => s.empresa?.id)
 
   const totalPagado = pagos.reduce((acc, p) => {
     try { return acc.plus(new Decimal(p.monto || '0')) } catch { return acc }
@@ -154,20 +174,36 @@ export function PaymentModal({
       return
     }
 
-    startTransition(async () => {
-      const res = await procesarVenta({
-        tipo_venta: tipoVenta,
-        tipo_comprobante: tipoComprobante,
-        cliente_id: clienteId ?? undefined,
-        items: items.map((i) => ({
-          producto_id: i.producto_id,
-          cantidad: i.cantidad,
-          descuento: i.descuento,
-        })),
-        pagos: pagos
-          .filter((p) => p.monto && parseFloat(p.monto) > 0)
-          .map((p) => ({ metodo_pago: p.metodo, monto: p.monto })),
+    const ventaPayload = {
+      tipo_venta: tipoVenta,
+      tipo_comprobante: tipoComprobante,
+      cliente_id: clienteId ?? undefined,
+      items: items.map((i) => ({
+        producto_id: i.producto_id,
+        cantidad: i.cantidad,
+        descuento: i.descuento,
+      })),
+      pagos: pagos
+        .filter((p) => p.monto && parseFloat(p.monto) > 0)
+        .map((p) => ({ metodo_pago: p.metodo, monto: p.monto })),
+    }
+
+    if (!navigator.onLine && empresaId) {
+      saveVentaPendiente(empresaId, ventaPayload).then(() => {
+        clear()
+        onSuccess({
+          id: crypto.randomUUID(),
+          numero_completo: null,
+          total,
+          tipo_comprobante: tipoComprobante,
+          pendiente: true,
+        })
       })
+      return
+    }
+
+    startTransition(async () => {
+      const res = await procesarVenta(ventaPayload)
 
       if (res.error) {
         setError(res.error)
@@ -175,7 +211,7 @@ export function PaymentModal({
       }
 
       clear()
-      onSuccess(res.data!)
+      onSuccess({ ...res.data!, pendiente: false })
     })
   }
 
