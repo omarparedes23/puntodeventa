@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { getCompras } from './actions'
+
+export const dynamic = 'force-dynamic'
 import { ComprasList } from './components/ComprasList'
 
 export default async function ComprasPage() {

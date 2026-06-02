@@ -2,6 +2,8 @@ import { getProveedores } from '@/app/actions/proveedores'
 import { ProveedoresContainer } from '@/components/proveedores/ProveedoresContainer'
 import { redirect } from 'next/navigation'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = {
   title: 'Proveedores | MarketPos',
   description: 'Gestión de proveedores',

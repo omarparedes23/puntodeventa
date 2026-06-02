@@ -1,4 +1,6 @@
 import { getComprobantes } from './actions'
+
+export const dynamic = 'force-dynamic'
 import { ComprobantesLista } from './components/ComprobantesLista'
 
 export default async function ComprobantesPage() {

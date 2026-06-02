@@ -1,4 +1,6 @@
 import { getCajaActiva, getMovimientos } from './actions'
+
+export const dynamic = 'force-dynamic'
 import { AbrirCajaForm } from './components/AbrirCajaForm'
 import { CajaActiva } from './components/CajaActiva'
 

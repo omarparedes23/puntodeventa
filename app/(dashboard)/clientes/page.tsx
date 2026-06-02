@@ -1,6 +1,8 @@
 import { getClientes } from '@/app/(dashboard)/clientes/actions'
 import { ClientesContainer } from '@/components/clientes/ClientesContainer'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = {
   title: 'Clientes | MarketPos',
   description: 'Gestión de clientes del sistema',
