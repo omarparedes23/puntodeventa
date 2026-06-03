@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Decimal } from 'decimal.js'
+import { fechaHoyLima } from '@/lib/utils'
 import { compraSchema, pagoCompraSchema, type CompraData, type PagoCompraData } from '@/lib/validations/compras'
 import type { Compra, CompraItem, Proveedor } from '@/types/database'
 
@@ -216,7 +217,7 @@ export async function registrarCompra(
       proveedor_id: proveedor_id ?? null,
       usuario_id: user.id,
       nro_documento: nro_documento ?? null,
-      fecha_compra: fecha_compra ?? new Date().toISOString().split('T')[0],
+      fecha_compra: fecha_compra ?? fechaHoyLima(),
       total: totalFinal,
       notas: notas ?? null,
     })

@@ -2,7 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect } from 'react'
 import { useSessionStore } from '@/stores/sessionStore'
+import { useUiStore } from '@/stores/uiStore'
 
 const NAV_ITEMS = [
   {
@@ -102,13 +104,24 @@ const BOTTOM_ITEMS = [
   },
 ]
 
-function NavItem({ href, label, icon }: { href: string; label: string; icon: React.ReactNode }) {
+function NavItem({
+  href,
+  label,
+  icon,
+  onClick,
+}: {
+  href: string
+  label: string
+  icon: React.ReactNode
+  onClick?: () => void
+}) {
   const pathname = usePathname()
   const isActive = pathname === href || pathname.startsWith(href + '/')
 
   return (
     <Link
       href={href}
+      onClick={onClick}
       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${
         isActive
           ? 'bg-sidebar-accent text-sidebar-primary'
@@ -123,34 +136,71 @@ function NavItem({ href, label, icon }: { href: string; label: string; icon: Rea
 
 export function Sidebar() {
   const { perfil, empresa } = useSessionStore()
+  const { sidebarOpen, closeSidebar } = useUiStore()
+  const pathname = usePathname()
+
+  useEffect(() => {
+    closeSidebar()
+  }, [pathname, closeSidebar])
 
   return (
-    <aside className="w-56 shrink-0 h-screen sticky top-0 border-r border-sidebar-border bg-sidebar flex flex-col">
-      {/* Logo / empresa */}
-      <div className="px-4 py-4 border-b border-sidebar-border">
-        <p className="text-xs font-semibold text-sidebar-foreground truncate">{empresa?.nombre_comercial ?? empresa?.razon_social ?? 'MarketPos'}</p>
-        <p className="text-xs text-sidebar-foreground/50 truncate">{empresa?.ruc}</p>
-      </div>
+    <>
+      {/* Backdrop — mobile only */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={closeSidebar}
+        />
+      )}
 
-      {/* Nav principal */}
-      <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
-        {NAV_ITEMS.map((item) => (
-          <NavItem key={item.href} {...item} />
-        ))}
-      </nav>
-
-      {/* Sección inferior */}
-      <div className="px-3 py-3 border-t border-sidebar-border space-y-0.5">
-        {BOTTOM_ITEMS.filter((item) => !item.adminOnly || perfil?.rol === 'administrador').map((item) => (
-          <NavItem key={item.href} href={item.href} label={item.label} icon={item.icon} />
-        ))}
-
-        {/* Usuario actual */}
-        <div className="px-3 py-2.5 mt-1">
-          <p className="text-xs font-medium text-sidebar-foreground truncate">{perfil?.nombre}</p>
-          <p className="text-xs text-sidebar-foreground/50 capitalize">{perfil?.rol?.replace('_', ' ')}</p>
+      {/* Sidebar */}
+      <aside
+        className={[
+          'fixed lg:sticky top-0 z-50 lg:z-auto',
+          'w-56 shrink-0 h-screen',
+          'border-r border-sidebar-border bg-sidebar flex flex-col',
+          'transition-transform duration-200 ease-in-out',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+        ].join(' ')}
+      >
+        {/* Header */}
+        <div className="px-4 py-4 border-b border-sidebar-border flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-sidebar-foreground truncate">
+              {empresa?.nombre_comercial ?? empresa?.razon_social ?? 'MarketPos'}
+            </p>
+            <p className="text-xs text-sidebar-foreground/50 truncate">{empresa?.ruc}</p>
+          </div>
+          {/* Close button — mobile only */}
+          <button
+            className="shrink-0 p-1 rounded-lg text-sidebar-foreground/50 hover:text-sidebar-foreground lg:hidden"
+            onClick={closeSidebar}
+            aria-label="Cerrar menú"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
-      </div>
-    </aside>
+
+        {/* Nav principal */}
+        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
+          {NAV_ITEMS.map((item) => (
+            <NavItem key={item.href} {...item} onClick={closeSidebar} />
+          ))}
+        </nav>
+
+        {/* Sección inferior */}
+        <div className="px-3 py-3 border-t border-sidebar-border space-y-0.5">
+          {BOTTOM_ITEMS.filter((item) => !item.adminOnly || perfil?.rol === 'administrador').map((item) => (
+            <NavItem key={item.href} href={item.href} label={item.label} icon={item.icon} onClick={closeSidebar} />
+          ))}
+          <div className="px-3 py-2.5 mt-1">
+            <p className="text-xs font-medium text-sidebar-foreground truncate">{perfil?.nombre}</p>
+            <p className="text-xs text-sidebar-foreground/50 capitalize">{perfil?.rol?.replace('_', ' ')}</p>
+          </div>
+        </div>
+      </aside>
+    </>
   )
 }

@@ -1,27 +1,36 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { fechaHoyLima } from '@/lib/utils'
 
 type ActionResponse<T> = { data: T | null; error: string | null }
 
 export type PeriodoFiltro = 'hoy' | 'semana' | 'mes' | 'anio'
 
 function getRangoFechas(periodo: PeriodoFiltro): { desde: string; hasta: string } {
-  const now = new Date()
-  const hasta = now.toISOString().split('T')[0]
+  const hasta = fechaHoyLima()
+  // Operar sobre la fecha Lima para evitar desfases UTC
+  const [y, m, d] = hasta.split('-').map(Number)
+  const base = new Date(y, m - 1, d)
 
-  const desde = new Date(now)
   if (periodo === 'hoy') {
     return { desde: hasta, hasta }
-  } else if (periodo === 'semana') {
-    desde.setDate(desde.getDate() - 6)
+  }
+
+  const desde = new Date(base)
+  if (periodo === 'semana') {
+    desde.setDate(d - 6)
   } else if (periodo === 'mes') {
     desde.setDate(1)
   } else {
     desde.setMonth(0, 1)
   }
 
-  return { desde: desde.toISOString().split('T')[0], hasta }
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const fmtLocal = (dt: Date) =>
+    `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
+
+  return { desde: fmtLocal(desde), hasta }
 }
 
 // ─── Ventas por período ───────────────────────────────────────────────────────

@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Decimal } from 'decimal.js'
+import { fechaHoyLima } from '@/lib/utils'
 import type { Venta, VentaItem, VentaPago, Cliente } from '@/types/database'
 import type { NotaCreditoMotivo } from '@/lib/facturacion/index'
 import type { ItemNC } from './constants'
@@ -283,7 +284,7 @@ export async function crearNotaCredito(
   const subtotal = items.reduce((s, i) => s + i.subtotal, 0)
 
   const cliente = (ventaOrig as any).cliente as { nombre: string; tipo_documento: string | null; nro_documento: string | null } | null
-  const hoy = new Date().toISOString().split('T')[0]
+  const hoy = fechaHoyLima()
 
   const { data: nc, error: ncError } = await supabase
     .from('ptovta_ventas')

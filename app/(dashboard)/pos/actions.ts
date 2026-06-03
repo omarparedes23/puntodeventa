@@ -3,6 +3,7 @@
 import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { fechaHoyLima } from '@/lib/utils'
 import { Decimal } from 'decimal.js'
 import { ventaSchema, type VentaInput } from '@/lib/validations/pos'
 import type { Venta } from '@/types/database'
@@ -375,7 +376,7 @@ export async function procesarVenta(
       tipo: tipo_comprobante as 'boleta' | 'factura',
       serie: serie!,
       correlativo: correlativo!,
-      fecha_emision: new Date().toISOString().split('T')[0],
+      fecha_emision: fechaHoyLima(),
       cliente: clienteNubefact,
       items: itemsCalculados.map((i) => ({
         descripcion: i.producto_nombre,

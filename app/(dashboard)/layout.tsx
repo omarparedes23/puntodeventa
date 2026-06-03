@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import SessionHydrator from './SessionHydrator'
 import { Sidebar } from '@/components/shared/Sidebar'
+import { MobileHeader } from '@/components/shared/MobileHeader'
 import { OfflineSyncProvider } from '@/components/shared/OfflineSyncProvider'
 
 export default async function DashboardLayout({
@@ -43,9 +44,12 @@ export default async function DashboardLayout({
       <OfflineSyncProvider empresaId={perfil.empresa_id} />
       <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <main className="flex-1 min-w-0 overflow-y-auto">
-          {children}
-        </main>
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <MobileHeader />
+          <main className="flex-1 min-w-0 overflow-y-auto">
+            {children}
+          </main>
+        </div>
       </div>
     </SessionHydrator>
   )
