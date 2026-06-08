@@ -300,7 +300,7 @@ export async function crearNotaCredito(
     usuario_id: perfil.id,
     cliente_id: ventaOrig.cliente_id ?? null,
     tipo_venta: ventaOrig.tipo_venta,
-    tipo_comprobante: 'nota_credito',
+    tipo_comprobante: 'nota_credito' as const,
     serie,
     correlativo,
     numero_completo,
