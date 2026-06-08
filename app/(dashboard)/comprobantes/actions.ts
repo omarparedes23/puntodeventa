@@ -308,7 +308,7 @@ export async function crearNotaCredito(
     descuento_total: 0,
     igv: Math.round(igv * 100) / 100,
     total: Math.round(total * 100) / 100,
-    estado: 'pendiente',
+    estado: 'pendiente' as const,
     fecha_emision: hoy,
     referencia_venta_id: ventaOriginalId,
     nota_motivo: motivo_codigo,
