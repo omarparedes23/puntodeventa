@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { reenviarSunat, anularComprobante, crearNotaCredito, type ComprobanteCompleto } from '../actions'
+import { reenviarSunat, anularComprobante, crearNotaCredito, descargarDocumento, type ComprobanteCompleto } from '../actions'
 import { MOTIVOS_NC, type ItemNC } from '../constants'
 import type { NotaCreditoMotivo } from '@/lib/facturacion/index'
 import { useSessionStore } from '@/stores/sessionStore'
@@ -28,14 +28,69 @@ const ESTADO_CONFIG: Record<string, { cls: string; label: string; icon: string }
 }
 
 const TIPO_BADGE: Record<string, string> = {
-  boleta:  'bg-blue-50 text-blue-700',
-  factura: 'bg-purple-50 text-purple-700',
-  ticket:  'bg-gray-50 text-gray-600',
+  boleta:       'bg-blue-50 text-blue-700',
+  factura:      'bg-purple-50 text-purple-700',
+  ticket:       'bg-gray-50 text-gray-600',
+  nota_credito: 'bg-orange-50 text-orange-700',
+  nota_debito:  'bg-red-50 text-red-700',
+}
+
+const TIPO_LABEL: Record<string, string> = {
+  boleta:       'Boleta',
+  factura:      'Factura',
+  ticket:       'Ticket',
+  nota_credito: 'Nota de Crédito',
+  nota_debito:  'Nota de Débito',
+}
+
+const MOTIVO_NC_LABEL: Record<string, string> = {
+  '01': 'Anulación de la operación',
+  '03': 'Corrección por error en la descripción',
+  '04': 'Descuento global',
+  '06': 'Devolución total',
+  '07': 'Devolución por ítem',
 }
 
 const METODO_LABEL: Record<string, string> = {
   efectivo: 'Efectivo', yape: 'Yape', tarjeta: 'Tarjeta',
   transferencia: 'Transferencia', credito: 'Crédito',
+}
+
+// ---- Botón de descarga con presigned URL ----
+function DownloadButton({ ventaId, tipo, label }: {
+  ventaId: string
+  tipo: 'xml' | 'zip' | 'pdf'
+  label: string
+}) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleClick() {
+    setLoading(true)
+    setError(null)
+    const res = await descargarDocumento(ventaId, tipo)
+    setLoading(false)
+    if (res.error) { setError(res.error); return }
+    if (res.data?.url) window.open(res.data.url, '_blank')
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={handleClick}
+        disabled={loading}
+        title={error ?? undefined}
+        className="px-3 py-1.5 bg-white/60 hover:bg-white/80 rounded-lg text-xs font-medium transition disabled:opacity-50"
+      >
+        {loading ? '⏳' : label}
+      </button>
+      {error && (
+        <span className="absolute top-full left-0 mt-1 text-xs text-red-600 whitespace-nowrap bg-white border border-red-200 rounded px-2 py-1 z-10">
+          {error}
+        </span>
+      )}
+    </div>
+  )
 }
 
 // ---- Modal de anulación ----
@@ -258,8 +313,8 @@ export function ComprobanteDetalle({ comprobante: initial }: { comprobante: Comp
             <h1 className="text-lg font-semibold font-mono">
               {comprobante.numero_completo ?? 'Sin número'}
             </h1>
-            <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${TIPO_BADGE[comprobante.tipo_comprobante]}`}>
-              {comprobante.tipo_comprobante}
+            <span className={`px-2 py-0.5 rounded text-xs font-medium ${TIPO_BADGE[comprobante.tipo_comprobante] ?? 'bg-gray-50 text-gray-600'}`}>
+              {TIPO_LABEL[comprobante.tipo_comprobante] ?? comprobante.tipo_comprobante}
             </span>
           </div>
           <p className="text-xs text-gray-400 mt-0.5">{fmtDate(comprobante.fecha_emision)}</p>
@@ -278,17 +333,11 @@ export function ComprobanteDetalle({ comprobante: initial }: { comprobante: Comp
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
-          {comprobante.pdf_url && (
-            <a href={comprobante.pdf_url} target="_blank" rel="noopener noreferrer"
-              className="px-3 py-1.5 bg-white/60 hover:bg-white/80 rounded-lg text-xs font-medium transition">
-              📄 PDF
-            </a>
+          {esSunat && comprobante.estado === 'emitida' && comprobante.pdf_url && (
+            <DownloadButton ventaId={comprobante.id} tipo="pdf" label="📄 PDF" />
           )}
-          {comprobante.xml_url && (
-            <a href={comprobante.xml_url} target="_blank" rel="noopener noreferrer"
-              className="px-3 py-1.5 bg-white/60 hover:bg-white/80 rounded-lg text-xs font-medium transition">
-              📋 XML
-            </a>
+          {esSunat && comprobante.estado === 'emitida' && comprobante.xml_url && (
+            <DownloadButton ventaId={comprobante.id} tipo="xml" label="📋 XML" />
           )}
           {puedeReenviar && (
             <button onClick={handleReenviar} disabled={isPending}
@@ -310,6 +359,23 @@ export function ComprobanteDetalle({ comprobante: initial }: { comprobante: Comp
           )}
         </div>
       </div>
+
+      {comprobante.tipo_comprobante === 'nota_credito' && comprobante.referencia_venta_id && (
+        <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 flex items-center justify-between text-sm">
+          <div>
+            <p className="text-xs text-orange-500 mb-0.5">Comprobante original</p>
+            <p className="font-medium text-orange-900">
+              {comprobante.nota_motivo ? `Motivo: ${MOTIVO_NC_LABEL[comprobante.nota_motivo] ?? comprobante.nota_motivo}` : 'Nota de Crédito'}
+            </p>
+          </div>
+          <a
+            href={`/comprobantes/${comprobante.referencia_venta_id}`}
+            className="text-xs font-medium text-orange-700 hover:text-orange-900 underline"
+          >
+            Ver original →
+          </a>
+        </div>
+      )}
 
       {actionError && (
         <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{actionError}</div>

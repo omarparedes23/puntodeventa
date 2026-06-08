@@ -42,7 +42,7 @@ export type ComprobanteCompleto = Venta & {
 }
 
 export type FiltrosComprobante = {
-  tipo?: 'boleta' | 'factura' | 'ticket'
+  tipo?: 'boleta' | 'factura' | 'ticket' | 'nota_credito' | 'nota_debito'
   estado?: 'pendiente' | 'emitida' | 'anulada' | 'error_sunat'
   desde?: string   // ISO date YYYY-MM-DD
   hasta?: string
@@ -167,7 +167,7 @@ export async function reenviarSunat(
   const items = (venta as any).items as VentaItem[]
   const cliente = (venta as any).cliente as { nombre: string; tipo_documento: string | null; nro_documento: string | null } | null
 
-  const { facturacionService } = await import('@/lib/facturacion/nubefact')
+  const { facturacionService } = await import('@/lib/facturacion/factory')
 
   const comprobanteData = {
     tipo: venta.tipo_comprobante as 'boleta' | 'factura',
@@ -243,24 +243,31 @@ export async function crearNotaCredito(
   if (perfil.rol !== 'administrador') return { data: null, error: 'Solo el administrador puede emitir notas de crédito' }
   if (!items.length) return { data: null, error: 'Debe incluir al menos un ítem' }
 
-  const { data: ventaOrig } = await supabase
+  const { data: ventaOrig, error: ventaOrigError } = await supabase
     .from('ptovta_ventas')
     .select('*, cliente:ptovta_clientes(nombre, tipo_documento, nro_documento)')
     .eq('id', ventaOriginalId)
     .eq('empresa_id', perfil.empresa_id)
     .single()
 
-  if (!ventaOrig) return { data: null, error: 'Comprobante original no encontrado' }
+  if (ventaOrigError || !ventaOrig) {
+    console.error('[NC] ventaOrig no encontrada:', ventaOrigError)
+    return { data: null, error: 'Comprobante original no encontrado' }
+  }
+  console.log('[NC] ventaOrig:', ventaOrig.numero_completo, '| estado:', ventaOrig.estado, '| tipo:', ventaOrig.tipo_comprobante)
+
   if (ventaOrig.estado !== 'emitida') return { data: null, error: 'Solo se puede hacer NC sobre comprobantes emitidos' }
   if (!['boleta', 'factura'].includes(ventaOrig.tipo_comprobante)) {
     return { data: null, error: 'Las notas de crédito aplican solo a boletas y facturas' }
   }
 
-  const { data: empresa } = await supabase
+  const { data: empresa, error: empresaError } = await supabase
     .from('ptovta_empresas')
     .select('serie_nc_boleta, serie_nc_factura')
     .eq('id', perfil.empresa_id)
     .single()
+
+  console.log('[NC] empresa series:', empresa, '| error:', empresaError)
 
   const serie = ventaOrig.tipo_comprobante === 'boleta'
     ? (empresa?.serie_nc_boleta ?? 'BBB1')
@@ -278,38 +285,47 @@ export async function crearNotaCredito(
 
   const correlativo = (ultimaNC?.correlativo ?? 0) + 1
   const numero_completo = `${serie}-${String(correlativo).padStart(8, '0')}`
+  console.log('[NC] serie:', serie, '| correlativo:', correlativo, '| numero:', numero_completo)
 
   const total = items.reduce((s, i) => s + i.total, 0)
   const igv = items.reduce((s, i) => s + i.igv, 0)
   const subtotal = items.reduce((s, i) => s + i.subtotal, 0)
+  console.log('[NC] totales → subtotal:', subtotal, '| igv:', igv, '| total:', total)
 
   const cliente = (ventaOrig as any).cliente as { nombre: string; tipo_documento: string | null; nro_documento: string | null } | null
   const hoy = fechaHoyLima()
 
+  const insertPayload = {
+    empresa_id: perfil.empresa_id,
+    usuario_id: perfil.id,
+    cliente_id: ventaOrig.cliente_id ?? null,
+    tipo_venta: ventaOrig.tipo_venta,
+    tipo_comprobante: 'nota_credito',
+    serie,
+    correlativo,
+    numero_completo,
+    subtotal: Math.round(subtotal * 100) / 100,
+    descuento_total: 0,
+    igv: Math.round(igv * 100) / 100,
+    total: Math.round(total * 100) / 100,
+    estado: 'pendiente',
+    fecha_emision: hoy,
+    referencia_venta_id: ventaOriginalId,
+    nota_motivo: motivo_codigo,
+  }
+  console.log('[NC] INSERT payload:', JSON.stringify(insertPayload))
+
   const { data: nc, error: ncError } = await supabase
     .from('ptovta_ventas')
-    .insert({
-      empresa_id: perfil.empresa_id,
-      usuario_id: perfil.id,
-      cliente_id: ventaOrig.cliente_id ?? null,
-      tipo_venta: ventaOrig.tipo_venta,
-      tipo_comprobante: 'nota_credito',
-      serie,
-      correlativo,
-      numero_completo,
-      subtotal: Math.round(subtotal * 100) / 100,
-      descuento_total: 0,
-      igv: Math.round(igv * 100) / 100,
-      total: Math.round(total * 100) / 100,
-      estado: 'pendiente',
-      fecha_emision: hoy,
-      referencia_venta_id: ventaOriginalId,
-      nota_motivo: motivo_codigo,
-    })
+    .insert(insertPayload)
     .select('id, numero_completo')
     .single()
 
-  if (ncError || !nc) return { data: null, error: 'Error al crear la nota de crédito' }
+  if (ncError || !nc) {
+    console.error('[NC] INSERT ptovta_ventas falló → code:', ncError?.code, '| message:', ncError?.message, '| details:', ncError?.details, '| hint:', ncError?.hint)
+    return { data: null, error: 'Error al crear la nota de crédito' }
+  }
+  console.log('[NC] INSERT OK → id:', nc.id)
 
   await supabase.from('ptovta_venta_items').insert(
     items.map((i) => ({
@@ -356,7 +372,7 @@ export async function crearNotaCredito(
   }
 
   // Enviar a Nubefact
-  const { facturacionService } = await import('@/lib/facturacion/nubefact')
+  const { facturacionService } = await import('@/lib/facturacion/factory')
   let resultado
   try {
     resultado = await facturacionService.emitirNotaCredito({
@@ -406,6 +422,50 @@ export async function crearNotaCredito(
 }
 
 // -------------------------------------------------------
+// descargarDocumento
+// Genera una URL de descarga temporal desde el microservicio OSE-SUNAT.
+// -------------------------------------------------------
+export async function descargarDocumento(
+  ventaId: string,
+  tipo: 'xml' | 'zip' | 'pdf'
+): Promise<ActionResponse<{ url: string }>> {
+  const { supabase, perfil } = await getSession()
+  if (!perfil?.empresa_id) return { data: null, error: 'No autenticado' }
+
+  const { data: venta } = await supabase
+    .from('ptovta_ventas')
+    .select('nubefact_id, xml_url, pdf_url')
+    .eq('id', ventaId)
+    .eq('empresa_id', perfil.empresa_id)
+    .single()
+
+  if (!venta) return { data: null, error: 'Comprobante no encontrado' }
+
+  const provider = process.env.FACTURACION_PROVIDER ?? 'nubefact'
+
+  if (provider === 'propio' && venta.nubefact_id) {
+    try {
+      const res = await fetch(
+        `${process.env.OSE_SUNAT_URL}/api/v1/comprobantes/${venta.nubefact_id}/documento?tipo=${tipo}`,
+        { headers: { 'X-Api-Key': process.env.OSE_SUNAT_API_KEY ?? '' } }
+      )
+      if (!res.ok) return { data: null, error: 'Error al generar URL de descarga' }
+      const json = await res.json() as { url: string }
+      return { data: { url: json.url }, error: null }
+    } catch {
+      return { data: null, error: 'Error de conexión con el microservicio' }
+    }
+  }
+
+  // Fallback Nubefact: usar URL almacenada si es una URL pública válida
+  const stored = tipo === 'pdf' ? venta.pdf_url : venta.xml_url
+  if (!stored || !stored.startsWith('http')) {
+    return { data: null, error: 'Documento no disponible' }
+  }
+  return { data: { url: stored }, error: null }
+}
+
+// -------------------------------------------------------
 // anularComprobante
 // Solo administradores. Solo comprobantes emitidos con nubefact_id.
 // -------------------------------------------------------
@@ -439,7 +499,7 @@ export async function anularComprobante(
     return { data: null, error: 'Este comprobante no tiene ID de Nubefact — no se puede anular en SUNAT' }
   }
 
-  const { facturacionService } = await import('@/lib/facturacion/nubefact')
+  const { facturacionService } = await import('@/lib/facturacion/factory')
 
   try {
     await facturacionService.anularComprobante(

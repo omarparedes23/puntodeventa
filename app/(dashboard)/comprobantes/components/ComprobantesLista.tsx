@@ -20,9 +20,19 @@ const ESTADO_BADGE: Record<string, { cls: string; label: string }> = {
 }
 
 const TIPO_BADGE: Record<string, string> = {
-  boleta:  'bg-blue-50 text-blue-600',
-  factura: 'bg-purple-50 text-purple-600',
-  ticket:  'bg-gray-50 text-gray-600',
+  boleta:       'bg-blue-50 text-blue-600',
+  factura:      'bg-purple-50 text-purple-600',
+  ticket:       'bg-gray-50 text-gray-600',
+  nota_credito: 'bg-orange-50 text-orange-600',
+  nota_debito:  'bg-red-50 text-red-600',
+}
+
+const TIPO_LABEL: Record<string, string> = {
+  boleta:       'Boleta',
+  factura:      'Factura',
+  ticket:       'Ticket',
+  nota_credito: 'Nota de Crédito',
+  nota_debito:  'Nota de Débito',
 }
 
 export function ComprobantesLista({ comprobantes }: { comprobantes: ComprobanteResumen[] }) {
@@ -54,6 +64,7 @@ export function ComprobantesLista({ comprobantes }: { comprobantes: ComprobanteR
             <option value="boleta">Boletas</option>
             <option value="factura">Facturas</option>
             <option value="ticket">Tickets</option>
+            <option value="nota_credito">Notas de Crédito</option>
           </select>
         </div>
         <div>
@@ -121,8 +132,8 @@ export function ComprobantesLista({ comprobantes }: { comprobantes: ComprobanteR
                       {c.numero_completo ?? <span className="text-gray-400 italic font-sans">Sin número</span>}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium capitalize ${TIPO_BADGE[c.tipo_comprobante]}`}>
-                        {c.tipo_comprobante}
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${TIPO_BADGE[c.tipo_comprobante] ?? 'bg-gray-50 text-gray-600'}`}>
+                        {TIPO_LABEL[c.tipo_comprobante] ?? c.tipo_comprobante}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-600">{fmtDate(c.fecha_emision)}</td>

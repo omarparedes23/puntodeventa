@@ -62,9 +62,9 @@ CREATE TABLE IF NOT EXISTS public.ptovta_ventas (
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Correlativo único por empresa+serie (sin contar tickets)
+-- Correlativo único por empresa+tipo+serie (SUNAT identifica por RUC+tipo+serie+correlativo)
 CREATE UNIQUE INDEX IF NOT EXISTS idx_ventas_serie_correlativo
-  ON public.ptovta_ventas (empresa_id, serie, correlativo)
+  ON public.ptovta_ventas (empresa_id, tipo_comprobante, serie, correlativo)
   WHERE serie IS NOT NULL AND correlativo IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_ventas_empresa_fecha

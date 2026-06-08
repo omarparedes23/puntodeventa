@@ -381,7 +381,7 @@ export async function procesarVenta(
       items: itemsCalculados.map((i) => ({
         descripcion: i.producto_nombre,
         cantidad: i.cantidad,
-        valor_unitario: i.subtotal / i.cantidad,
+        valor_unitario: new Decimal(i.subtotal).dividedBy(i.cantidad).toDecimalPlaces(10).toNumber(),
         precio_unitario: i.precio_unitario,
         subtotal: i.subtotal,
         igv: i.igv,
@@ -394,7 +394,7 @@ export async function procesarVenta(
     after(async () => {
       const tNF = Date.now()
       console.log(`[POS] [bg] Enviando a Nubefact: ${numero_completo}`)
-      const { facturacionService } = await import('@/lib/facturacion/nubefact')
+      const { facturacionService } = await import('@/lib/facturacion/factory')
       try {
         const resultado = tipo_comprobante === 'boleta'
           ? await facturacionService.emitirBoleta(nfPayload)
