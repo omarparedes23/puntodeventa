@@ -1,7 +1,21 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
-    "build": { "dependsOn": ["^build"], "outputs": [".next/**", "!.next/cache/**"] },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**"],
+      "env": [
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "NUBEFACT_URL",
+        "NUBEFACT_TOKEN",
+        "IGV_RATE",
+        "OSE_SUNAT_URL",
+        "OSE_SUNAT_API_KEY",
+        "FACTURACION_PROVIDER"
+      ]
+    },
     "dev": { "cache": false, "persistent": true },
     "lint": {},
     "test": { "outputs": [] },
