@@ -13,7 +13,9 @@
         "IGV_RATE",
         "OSE_SUNAT_URL",
         "OSE_SUNAT_API_KEY",
-        "FACTURACION_PROVIDER"
+        "FACTURACION_PROVIDER",
+        "DATABASE_URL",
+        "GROQ_API_KEY"
       ]
     },
     "dev": { "cache": false, "persistent": true },
