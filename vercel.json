@@ -1,0 +1,5 @@
+{
+  "buildCommand": "turbo build --filter=tablet",
+  "outputDirectory": "apps/tablet/.next",
+  "installCommand": "npm install"
+}
